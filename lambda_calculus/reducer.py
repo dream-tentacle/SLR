@@ -107,7 +107,7 @@ def normal_order_reduce(exp: str) -> str:
         if sub_exp[0] == ">":
             pre = ""
             if i > 0:
-                for j in range(i - 1):
+                for j in range(i):
                     pre += f"({sub_exps[j]})" if not is_x(sub_exps[j]) else sub_exps[j]
             inner = ""
             for j in range(i + 1, len(sub_exps)):
@@ -115,7 +115,7 @@ def normal_order_reduce(exp: str) -> str:
             result = substitute(sub_exp[3:], inner, sub_exp[1])
             reduced = pre + "(" + result + ")"
             return remove_outer_bracket(reduced)
-    for i, sub_exp in enumerate(sub_exps[:-1]):
+    for i, sub_exp in enumerate(sub_exps):
         if not is_normal_form(sub_exp):
             sub_exps[i] = normal_order_reduce(sub_exp)
             res = ""
@@ -131,7 +131,7 @@ def show_reduce_process(exp: str):
     i = 0
     while not is_normal_form(exp):
         i += 1
-        if i >= 20:
+        if i >= 10:
             break
         previous.append(exp)
         exp = normal_order_reduce(exp)
@@ -141,12 +141,12 @@ def show_reduce_process(exp: str):
             break
 
 
-show_reduce_process("(>x.z(>y.yy)x)(>x.z(>y.yy)x)")
+show_reduce_process("(>x.z(>y.yyy)x)(>x.z(>y.yyy)x)")
 show_reduce_process("(>x.xx)(>x.xx)")
-show_reduce_process("(>x.xx)(>y.yyy)")
+show_reduce_process("MNZ(>x.xx)(>y.yyy)")  # this still fails
 
 
 """
-(>x.z(>y.yy)x)(>x.z(>y.yy)x)
+(>x.z(>y.yyy)x)(>x.z(>y.yyy)x)
 
 """
