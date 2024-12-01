@@ -125,13 +125,15 @@ def normal_order_reduce(exp: str) -> str:
     raise Exception("The program failed!")
 
 
-def show_reduce_process(exp: str):
+@typechecked
+def show_reduce_process(exp: str, stopping: int = 10):
     print(exp)
     previous = []
     i = 0
     while not is_normal_form(exp):
         i += 1
-        if i >= 10:
+        if i >= stopping:
+            print("-> ... (the result is too long or it just diverges)")
             break
         previous.append(exp)
         exp = normal_order_reduce(exp)
@@ -143,10 +145,5 @@ def show_reduce_process(exp: str):
 
 show_reduce_process("(>x.z(>y.yyy)x)(>x.z(>y.yyy)x)")
 show_reduce_process("(>x.xx)(>x.xx)")
-show_reduce_process("MNZ(>x.xx)(>y.yyy)")  # this still fails
-
-
-"""
-(>x.z(>y.yyy)x)(>x.z(>y.yyy)x)
-
-"""
+show_reduce_process("MNZ(>x.xx)(>y.yyy)")
+# 停机问题无法判定结果
