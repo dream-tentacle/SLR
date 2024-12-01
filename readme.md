@@ -1,6 +1,6 @@
 ## Simple Language Reducer (SLR)
 
-This project is to help student (like me) to have a deeper understanding about some
+This project is to help students (like me) to have a deeper understanding about some
 simple programming languages of our course Formal Semantics of Programming Languages.
 
 ### Languages
