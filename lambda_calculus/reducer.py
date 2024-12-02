@@ -7,6 +7,7 @@ import sys, string
 sys.path.append("./")
 from checker import *
 from utils_lc import *
+from common.utilities import *
 
 
 def free_variable(exp: str) -> set[str]:

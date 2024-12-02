@@ -36,3 +36,15 @@ def test_scheme(tests: List[Tuple], func: Callable):
         print(f"{GREEN}ALL PASSED!{NORMAL}")
     else:
         print(f"{RED}{passed} out of {len(tests)} passed{NORMAL}")
+
+
+def is_x(exp: str):
+    """判断是不是单个大写/小写字母
+
+    Args:
+        exp (str): 字符串
+    """
+    return len(exp) == 1 and (
+        (ord(exp) <= ord("Z") and ord(exp) >= ord("A"))
+        or (ord(exp) <= ord("z") and ord(exp) >= ord("a"))
+    )
