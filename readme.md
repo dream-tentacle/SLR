@@ -7,4 +7,6 @@ simple programming languages of our course Formal Semantics of Programming Langu
 
 - [x] Lambda calculus
 - [ ] Simply-typed lambda calculus
+  - [x] typing
+  - [ ] reduction
 - [ ] Operational semantics
