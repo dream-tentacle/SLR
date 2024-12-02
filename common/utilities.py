@@ -48,3 +48,12 @@ def is_x(exp: str):
         (ord(exp) <= ord("Z") and ord(exp) >= ord("A"))
         or (ord(exp) <= ord("z") and ord(exp) >= ord("a"))
     )
+
+
+def is_eng(exp: str):
+    """判断是不是全由英语构成
+
+    Args:
+        exp (str): 字符串
+    """
+    return all([is_x(i) for i in exp])

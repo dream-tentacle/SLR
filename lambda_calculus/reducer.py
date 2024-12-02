@@ -1,5 +1,6 @@
 """
 Use '>' to represent lambda
+Every variable must be one char in a-z, A-Z
 """
 
 import sys, string
