@@ -12,6 +12,7 @@ class TermType:
 
 
 @dataclass
+@typechecked
 class VariableType(TermType):
     name: str
 
@@ -19,10 +20,11 @@ class VariableType(TermType):
         return isinstance(value, VariableType) and self.name == value.name
 
     def __str__(self) -> str:
-        return self.name
+        return f"{self.name}"
 
 
 @dataclass
+@typechecked
 class FunctionType(TermType):
     type1: TermType
     type2: TermType
@@ -46,6 +48,33 @@ class UnrecognizedType(TermType):
     pass
 
 
+def parse_type(exp: str) -> TermType:
+    if len(exp) == 0:
+        raise TermTypeError(msg="Empty type received", offset=0, text="")
+    if is_eng(exp):
+        return VariableType(exp)
+    count = count_outer_bracket(exp)
+    if count > 0:
+        exp = exp[count:-count]
+    bracket_count = 0
+    for i, ch in enumerate(exp):
+        if ch == "(":
+            bracket_count += 1
+        elif ch == ")":
+            bracket_count -= 1
+        if bracket_count == 0 and i < len(exp) - 1 and exp[i : i + 2] == "->":
+            try:
+                type1 = parse_type(exp[0:i])
+            except TermTypeError as e:
+                raise TermTypeError(msg=e.msg, offset=e.offset, text=exp) from None
+            try:
+                type2 = parse_type(exp[i + 2 :])
+            except TermTypeError as e:
+                raise TermTypeError(msg=e.msg, offset=e.offset + i + 2, text=exp) from None
+            return FunctionType(type1, type2)
+    raise TermTypeError(msg=f"Syntax for type '{exp}' is wrong", offset=0, text=exp)
+
+
 def count_outer_bracket(exp):
     bracket_stack = []
     corres_end = {}
@@ -53,6 +82,8 @@ def count_outer_bracket(exp):
         if c == "(":
             bracket_stack.append(i)
         elif c == ")":
+            if len(bracket_stack) == 0:
+                raise Exception(exp)
             corres_end[bracket_stack.pop()] = i
     for i in range(len(exp)):
         if corres_end.get(i, None) != len(exp) - i - 1:
@@ -113,19 +144,9 @@ class Term:
                 raise TermSyntaxError(
                     msg="No Corresponding '.' for '>'", offset=0, text=self.exp
                 ) from None
-            if not is_eng(self.exp.split(":")[0][1:]):
-                raise TermSyntaxError(
-                    msg="Wrong variable after '>'", offset=1, text=self.exp
-                ) from None
             self.child1 = Term(
-                self.exp.split(":")[0][1:], type=VariableType(self.exp.split(":")[1].split(".")[0])
+                self.exp.split(":")[0][1:], type=parse_type(self.exp.split(":")[1].split(".")[0])
             )
-            if not is_eng(self.exp.split(":")[1].split(".")[0]):
-                raise TermSyntaxError(
-                    msg=f"Wrong type for {self.child1.exp}",
-                    offset=self.exp.find(":") + 1,
-                    text=self.exp,
-                ) from None
             child2 = ".".join(self.exp.split(".")[1:])
             try:
                 self.child2 = Term(child2)
@@ -156,6 +177,12 @@ class Term:
             else:
                 # 说明是M(...)形式
                 child1 = self.exp.split("(")[0]
+                if "(" not in self.exp:
+                    raise TermSyntaxError(
+                        msg=f"Unknown syntax in '{self.exp}'",
+                        offset=0,
+                        text=self.exp,
+                    )
             if child1 is None:
                 raise TermSyntaxError(
                     msg="Wrong bracket expression",
@@ -180,28 +207,34 @@ class Term:
                     text=self.exp,
                 ) from None
 
-    def get_type(self, context: Dict[str, str]):
+    def get_type(self, context: Dict[str, TermType]):
         if isinstance(self.type, VariableType) and self.type.name == "":
-            if context[self.exp]:
-                return VariableType(context[self.exp])
-            raise TermTypeError(msg=f"Can't find type of '{self.exp}'", offset=0, text=self.exp)
+            if context.get(self.exp, None):
+                return context[self.exp]
+            raise TermTypeError(
+                msg=f"Can't find type of '{self.exp}'", offset=0, text=self.exp
+            ) from None
         if isinstance(self.type, FunctionType):
             new_context = context
-            if self.child1.type.name != "":
-                if context.get(self.child1.exp, self.child1.type.name) != self.child1.type.name:
-                    raise TermTypeError(
-                        msg=f"Collision types for variable '{self.child1.type.name}: "
-                        f"{context[self.child1.exp]} and {self.child1.type.name}",
-                        offset=1,
-                        text=self.exp,
-                    )
-                new_context[self.child1.exp] = self.child1.type.name
+            if self.child1.exp not in new_context.keys():
+                new_context[self.child1.exp] = self.child1.type
+            elif self.child1.type != new_context[self.child1.exp]:
+                raise TermTypeError(
+                    msg=f"Type collision occured for '{self.child1.exp}': {self.child1.type} and {new_context[self.child1.exp]}",
+                    offset=0,
+                    text=self.exp,
+                )
             try:
                 child2_type = self.child2.get_type(new_context)
             except TermTypeError as e:
                 raise TermTypeError(
-                    msg=e.msg, offset=e.offset + len(self.exp.split(".")[0]) + 1, text=self.exp
-                )
+                    msg=e.msg,
+                    offset=e.offset
+                    + len(self.exp.split(".")[0])
+                    + 1
+                    + count_outer_bracket(self.child2.orig_exp),
+                    text=self.exp,
+                ) from None
             return FunctionType(self.child1.type, child2_type)
         if isinstance(self.type, CallFunctionType):
             try:
@@ -211,7 +244,7 @@ class Term:
                     msg=e.msg,
                     offset=e.offset + count_outer_bracket(self.child1.orig_exp),
                     text=self.exp,
-                )
+                ) from None
             try:
                 child2_type = self.child2.get_type(context)
             except TermTypeError as e:
@@ -221,27 +254,26 @@ class Term:
                     + len(self.child1.orig_exp)
                     + count_outer_bracket(self.child2.orig_exp),
                     text=self.exp,
-                )
+                ) from None
             if not isinstance(child1_type, FunctionType):
                 raise TermTypeError(
-                    msg=f"Non-function term '{self.child1.exp}' cannot be called",
+                    msg=f"Non-function term '{self.child1.exp}' has type '{child1_type}', cannot be called",
                     offset=0,
                     text=self.exp,
-                )
-            if not isinstance(child1_type.type1, type(child2_type)):
+                ) from None
+            if (
+                not isinstance(child1_type.type1, type(child2_type))
+                or child1_type.type1 != child2_type
+            ):
                 raise TermTypeError(
-                    msg=f"Expect type '{child2_type}''{self.child1.exp}' cannot be called",
+                    msg=f"Expect type input '{child1_type.type1}', received '{child2_type}'",
                     offset=0,
                     text=self.exp,
-                )
-            if child1_type.type1 != child2_type:
-                raise TermTypeError(
-                    msg=f"Wrong variable type for function '{self.child1.exp}'",
-                    offset=len(self.child1.orig_exp) + count_outer_bracket(self.child2.orig_exp),
-                    text=self.exp,
-                )
+                ) from None
             return child1_type.type2
-        raise TermTypeError(msg=f"Unknown Error!", offset=0, text=self.exp)
+        raise TermTypeError(msg=f"Unknown Error!", offset=0, text=self.exp) from None
 
 
-print(Term("(>z:tau.>x:tau.x)(>y:tau.y)x").get_type({"x": "tau"}))
+if __name__ == "__main__":
+    term = Term("(>z:(sigma->sigma).((>b:tau.b)))(>y:sigma.y)")
+    print(term.get_type({"x": VariableType("tau")}))

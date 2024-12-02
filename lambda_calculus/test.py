@@ -2,7 +2,7 @@ import sys
 
 sys.path.append(".")
 from common.utilities import *
-import checker
+import lambda_calculus.checker as checker
 
 
 def test_get_exp_from_MN():

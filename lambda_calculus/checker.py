@@ -1,5 +1,8 @@
+import sys
 from typeguard import typechecked
-from utils_lc import *
+
+sys.path.append("./")
+from lambda_calculus.utils_lc import *
 
 
 @typechecked
@@ -10,6 +13,9 @@ def check_syntax(exp: str):
         exp (str): 需要检查语法的表达式
     """
     exp = exp.replace(" ", "")
+    for ch in exp:
+        if not is_x(ch) and ch != "(" and ch != ")" and ch != "." and ch != ">":
+            raise SyntaxError(f"Unknown char '{ch}' in '{exp}'")
     # 检查括号
     if not check_bracket(exp):
         raise SyntaxError(f"bracket for '{exp}' is invalid")
@@ -20,14 +26,14 @@ def check_syntax(exp: str):
     # x
     if is_x(exp):
         return
-    # >x/M
+    # >x.M
     if exp[0] == ">":
         try:
             check_syntax(exp[1])
         except:
             raise SyntaxError(f"variable syntax after first > for '{exp}' is invalid")
         try:
-            check_syntax(exp[2:])
+            check_syntax(exp[3:])
         except Exception as e:
             print(f"syntax for '{exp}' after dot is invalid:")
             raise e

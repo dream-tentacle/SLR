@@ -6,8 +6,8 @@ Every variable must be one char in a-z, A-Z
 import sys, string
 
 sys.path.append("./")
-from checker import *
-from utils_lc import *
+from lambda_calculus.checker import *
+from lambda_calculus.utils_lc import *
 from common.utilities import *
 
 
@@ -145,7 +145,8 @@ def show_reduce_process(exp: str, stopping: int = 10):
             break
 
 
-show_reduce_process("(>x.z(>y.yyy)x)(>x.z(>y.yyy)x)")
-show_reduce_process("(>x.xx)(>x.xx)")
-show_reduce_process("MNZ(>x.xx)(>y.yyy)")
-# 停机问题无法判定结果
+if __name__ == "__main__":
+    show_reduce_process("(>x.z(>y.yyy)x)(>x.z(>y.yyy)x)")
+    show_reduce_process("(>x.xx)(>x.xx)")
+    show_reduce_process("MNZ(>x.xx)(>y.yyy)")
+    # 停机问题无法判定结果
