@@ -114,7 +114,7 @@ class TermTypeError(TermError):
 
 class Term:
     @typechecked
-    def __init__(self, exp: str, type: Optional[TermType] = None):
+    def __init__(self, exp: str, type: TermType | None = None):
         self.exp = exp
         self.orig_exp = exp
         if type:
