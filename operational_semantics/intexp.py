@@ -67,14 +67,18 @@ class IntExp:
                 try:
                     self.left = IntExp(exp[outer_count:i])
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=e.offset, text=exp) from None
+                    e.offset += outer_count
+                    e.text = exp
+                    raise
                 try:
                     if outer_count == 0:
                         self.right = IntExp(exp[i + 1 :])
                     else:
                         self.right = IntExp(exp[i + 1 : -outer_count])
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=e.offset + i + 1, text=exp) from None
+                    e.offset += i + 1 + outer_count
+                    e.text = exp
+                    raise
                 self.op = ch
                 return
         exp = exp[outer_count:-outer_count] if outer_count != 0 else exp
@@ -83,7 +87,9 @@ class IntExp:
         except:
             if exp[0] in "1234567890":
                 raise IntExpSyntaxError(
-                    msg="Can't use number to start a variable", offset=outer_count, text=self.exp
+                    msg="Can't use number to start a variable",
+                    offset=outer_count,
+                    text=str(self).exp,
                 )
             self.value = exp
 
@@ -123,13 +129,17 @@ class IntExp:
                         self.left = None
                         return True
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=len(self.left.exp) + 2, text=self)
+                    e.offset += len(str(self.left)) + 1 + self.outer_count
+                    e.text = str(self)
+                    raise
 
             else:
                 try:
                     result = self.left.reduce(state)
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=e.offset, text=self)
+                    e.offset += self.outer_count
+                    e.text = str(self)
+                    raise
                 return result
         else:
             if self.outer_count > 0:
@@ -141,7 +151,7 @@ class IntExp:
                     return True
                 else:
                     raise IntExpSyntaxError(
-                        msg=f"Unknown variable '{self.value}", offset=0, text=self
+                        msg=f"Unknown variable '{self.value}", offset=0, text=str(self)
                     )
             return None
 
@@ -169,6 +179,6 @@ class IntExp:
 
 
 if __name__ == "__main__":
-    x = IntExp("5+((a+b)*3)-(1+2)")
+    x = IntExp("1+T")
     x.print_tree(0)
     x.reduce_till_the_end({"a": 1, "b": 4})

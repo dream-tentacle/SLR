@@ -58,18 +58,26 @@ class BoolExp:
                 try:
                     self.left = BoolExp(exp[outer_count:i])
                 except BoolExpSyntaxError as e:
-                    raise BoolExpSyntaxError(msg=e.msg, offset=e.offset, text=exp) from None
+                    raise BoolExpSyntaxError(
+                        msg=e.msg, offset=e.offset + outer_count, text=exp
+                    ) from None
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=e.offset, text=exp) from None
+                    raise IntExpSyntaxError(
+                        msg=e.msg, offset=e.offset + outer_count, text=exp
+                    ) from None
                 try:
                     if outer_count == 0:
                         self.right = BoolExp(exp[i + 1 :])
                     else:
                         self.right = BoolExp(exp[i + 1 : -outer_count])
                 except BoolExpSyntaxError as e:
-                    raise BoolExpSyntaxError(msg=e.msg, offset=e.offset + i + 1, text=exp) from None
+                    raise BoolExpSyntaxError(
+                        msg=e.msg, offset=e.offset + i + 1 + outer_count, text=exp
+                    ) from None
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=e.offset + i + 1, text=exp) from None
+                    raise IntExpSyntaxError(
+                        msg=e.msg, offset=e.offset + i + 1 + outer_count, text=exp
+                    ) from None
                 self.op = ch
                 return
         for i in range(len(exp) - 1, -1, -1):
@@ -83,7 +91,9 @@ class BoolExp:
                     try:
                         self.left = IntExp(exp[outer_count : i - 1])
                     except IntExpSyntaxError as e:
-                        raise IntExpSyntaxError(msg=e.msg, offset=e.offset, text=exp) from None
+                        raise IntExpSyntaxError(
+                            msg=e.msg, offset=e.offset + outer_count, text=exp
+                        ) from None
                     try:
                         if outer_count == 0:
                             self.right = IntExp(exp[i + 1 :])
@@ -91,7 +101,7 @@ class BoolExp:
                             self.right = IntExp(exp[i + 1 : -outer_count])
                     except IntExpSyntaxError as e:
                         raise IntExpSyntaxError(
-                            msg=e.msg, offset=e.offset + i + 1, text=exp
+                            msg=e.msg, offset=e.offset + i + 1 + outer_count, text=exp
                         ) from None
                     self.op = exp[i - 1] + ch
                     return
@@ -102,21 +112,23 @@ class BoolExp:
             self.left = None
             try:
                 if outer_count == 0:
-                    self.right = IntExp(exp[i + 1 :])
+                    self.right = IntExp(exp[1:])
                 else:
-                    self.right = IntExp(exp[i + 1 : -outer_count])
+                    self.right = IntExp(exp[outer_count + 1 : -outer_count])
             except IntExpSyntaxError as e:
-                raise IntExpSyntaxError(msg=e.msg, offset=e.offset + i + 1, text=exp) from None
+                raise IntExpSyntaxError(
+                    msg=e.msg, offset=e.offset + 1 + outer_count, text=exp
+                ) from None
             return
         exp = exp[outer_count:-outer_count] if outer_count != 0 else exp
         if exp == "T" or exp == "F":
             self.value = exp == "T"
         else:
             raise BoolExpSyntaxError(
-                msg=f"Unknown syntax in '{exp}'", offset=outer_count, text=self.exp
+                msg=f"Unknown syntax in '{exp}'", offset=outer_count, text=str(self).exp
             )
 
-    def print_tree(self, layer):
+    def print_tree(self, layer: int = 0):
         print("|" + layer * "-" + str(self))
         if self.op:
             self.left.print_tree(layer + 2)
@@ -152,12 +164,16 @@ class BoolExp:
                         self.left = None
                         return True
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=len(self.left.exp) + 3, text=self)
+                    e.offset += len(str(self.left)) + 2 + self.outer_count
+                    e.text = str(self)
+                    raise
             else:
                 try:
                     result = self.left.reduce(state)
                 except IntExpSyntaxError as e:
-                    raise IntExpSyntaxError(msg=e.msg, offset=e.offset, text=self)
+                    e.offset += self.outer_count
+                    e.text = str(self)
+                    raise
                 return result
         elif self.op == "&" or self.op == "|":
             if isinstance(self.left.value, bool) and self.left.outer_count == 0:
@@ -176,12 +192,24 @@ class BoolExp:
                         self.left = None
                         return True
                 except BoolExpSyntaxError as e:
-                    raise BoolExpSyntaxError(msg=e.msg, offset=len(self.left.exp) + 2, text=self)
+                    e.offset += len(str(self.left)) + 1 + e.offset + self.outer_count
+                    e.text = str(self)
+                    raise
+                except IntExpSyntaxError as e:
+                    e.offset += len(str(self.left)) + 1 + self.outer_count
+                    e.text = str(self)
+                    raise
             else:
                 try:
                     result = self.left.reduce(state)
                 except BoolExpSyntaxError as e:
-                    raise BoolExpSyntaxError(msg=e.msg, offset=e.offset, text=self)
+                    e.offset += self.outer_count
+                    e.text = str(self)
+                    raise
+                except IntExpSyntaxError as e:
+                    e.offset += self.outer_count
+                    e.text = str(self)
+                    raise
                 return result
         elif self.op == "!":
             assert self.left is None
@@ -198,7 +226,9 @@ class BoolExp:
                     self.right = None
                     self.left = None
             except BoolExpSyntaxError as e:
-                raise BoolExpSyntaxError(msg=e.msg, offset=e.offset + 1, text=self)
+                e.offset += 1 + self.outer_count
+                e.text = str(self)
+                raise
         else:
             if self.outer_count > 0:
                 self.outer_count -= 1
@@ -209,7 +239,7 @@ class BoolExp:
                     return True
                 else:
                     raise BoolExpSyntaxError(
-                        msg=f"Unknown variable '{self.value}", offset=0, text=self
+                        msg=f"Unknown variable '{self.value}", offset=0, text=str(self)
                     )
             return None
 
@@ -238,6 +268,6 @@ class BoolExp:
 
 
 if __name__ == "__main__":
-    x = BoolExp("T&(F|x+3!=5-6)|F")
+    x = BoolExp("T&((F|((x+3+(T))==5-6))|F)&5+((a+b)*3)-(1+2)==17")
     x.print_tree(0)
-    x.reduce_till_the_end({"x": 1})
+    x.reduce_till_the_end({"x": 1, "a": 1, "b": 4})
