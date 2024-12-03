@@ -20,7 +20,14 @@ uppercase = list(string.ascii_uppercase)
 # 合并小写字母和大写字母
 all_letters = lowercase + uppercase
 
-valid_contents = "".join(all_letters) + "0123456789" + "+-*/()"
+int_valid_contents = "".join(all_letters) + "0123456789" + "+-*/()"
+
+int_operation = {
+    "+": lambda x, y: x + y,
+    "-": lambda x, y: x - y,
+    "*": lambda x, y: x * y,
+    "/": lambda x, y: x / y,
+}
 
 
 class IntExp:
@@ -38,7 +45,7 @@ class IntExp:
         if len(exp) == 0:
             raise IntExpSyntaxError(msg="Empty expression received", offset=0, text="")
         for i, ch in enumerate(exp):
-            if ch not in valid_contents:
+            if ch not in int_valid_contents:
                 raise IntExpSyntaxError(msg=f"Invalid charactor: {ch}", offset=i, text=exp)
         self.exp = exp
         outer_count = 0
@@ -108,10 +115,12 @@ class IntExp:
                     elif result is False:
                         return False
                     else:
-                        self.op = None
                         assert isinstance(self.left.value, int)
                         assert isinstance(self.right.value, int)
-                        self.value = self.left.value + self.right.value
+                        self.value = int_operation[self.op](self.left.value, self.right.value)
+                        self.op = None
+                        self.right = None
+                        self.left = None
                         return True
                 except IntExpSyntaxError as e:
                     raise IntExpSyntaxError(msg=e.msg, offset=len(self.left.exp) + 2, text=self)
@@ -155,10 +164,11 @@ class IntExp:
             if result:
                 print("->", self)
             else:
-                print("=", self)
+                print(" =", self)
             result = self.reduce(state)
 
 
-x = IntExp("5+((a+b)*3)-(1+2)")
-x.print_tree(0)
-x.reduce_till_the_end({"a": 1, "b": 4})
+if __name__ == "__main__":
+    x = IntExp("5+((a+b)*3)-(1+2)")
+    x.print_tree(0)
+    x.reduce_till_the_end({"a": 1, "b": 4})
