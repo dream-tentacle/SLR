@@ -57,3 +57,32 @@ def is_eng(exp: str):
         exp (str): 字符串
     """
     return all([is_x(i) for i in exp])
+
+
+class TermError(Exception):
+    def __init__(self, msg, offset: int = None, text: str = None):
+        self.msg = msg
+        self.offset = offset
+        self.text = text
+
+    def __str__(self) -> str:
+        res = self.msg + "\n"
+        res += self.text + "\n"
+        res += "~" * self.offset + "^"
+        return res
+
+
+def count_outer_bracket(exp):
+    bracket_stack = []
+    corres_end = {}
+    for i, c in enumerate(exp):
+        if c == "(":
+            bracket_stack.append(i)
+        elif c == ")":
+            if len(bracket_stack) == 0:
+                raise SyntaxError(exp)
+            corres_end[bracket_stack.pop()] = i
+    for i in range(len(exp)):
+        if corres_end.get(i, None) != len(exp) - i - 1:
+            return i
+    return 0

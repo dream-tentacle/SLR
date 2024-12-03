@@ -75,35 +75,6 @@ def parse_type(exp: str) -> TermType:
     raise TermTypeError(msg=f"Syntax for type '{exp}' is wrong", offset=0, text=exp)
 
 
-def count_outer_bracket(exp):
-    bracket_stack = []
-    corres_end = {}
-    for i, c in enumerate(exp):
-        if c == "(":
-            bracket_stack.append(i)
-        elif c == ")":
-            if len(bracket_stack) == 0:
-                raise Exception(exp)
-            corres_end[bracket_stack.pop()] = i
-    for i in range(len(exp)):
-        if corres_end.get(i, None) != len(exp) - i - 1:
-            return i
-    return 0
-
-
-class TermError(Exception):
-    def __init__(self, msg, offset: int = None, text: str = None):
-        self.msg = msg
-        self.offset = offset
-        self.text = text
-
-    def __str__(self) -> str:
-        res = self.msg + "\n"
-        res += self.text + "\n"
-        res += "~" * self.offset + "^"
-        return res
-
-
 class TermSyntaxError(TermError):
     pass
 
